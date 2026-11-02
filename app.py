@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+from elo_model import elo_probability
 
 st.set_page_config(
     page_title="LoL Win Probability Predictor",
