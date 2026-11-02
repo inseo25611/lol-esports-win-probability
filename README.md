@@ -1,3 +1,4 @@
+
 # League of Legends Esports Probability Model
 
 **Elo-based pre-match probabilities for LCK/LEC and international matchups, with Bo1/Bo3/Bo5 series estimates, historical backtesting and calibration diagnostics.**
@@ -7,7 +8,7 @@
 ## What the application does
 
 - **Domestic V3:** same-league LCK/LEC matchup estimates from league-specific Elo ratings (K=24, carryover=0.75).
-- **International V4:** cross-region matchups using global Elo; Blue-side +20 is applied to single-game forecasts only, not to Elo updates.
+- **Global V4:** global Elo ratings, including same-region pairings in the forward-test script; the historical V4 evaluation covers cross-region games only; Blue-side +20 is applied to single-game forecasts only, not to Elo updates.
 - **Series forecast:** Bo3 and Bo5 win probabilities, plus exact final-score distributions computed from a single-game win probability. The series derivation assumes games have independent outcomes with the same win probability.
 - **Historical Evaluation:** V1–V3 domestic and V4 international metrics, plus calibration plots showing mean forecast and observed win frequency and group sizes. Series scores use exploratory pre-series neutral-Elo predictions.
 - **Quality assurance:** Pytest for Elo symmetry, side effects, series probabilities and CSV data quality; CI runs tests on push.
@@ -58,10 +59,24 @@ python -m streamlit run app.py
 - `notebooks/`: Elo analyses and V4 match-level export
 - `tests/`: model and data-quality tests
 - `.github/workflows/test.yml`: automated pytest
+- `forward_test.py`, `forward_test/`: prospective pre-match predictions, locked model code and ratings, SHA-256 integrity checks and separately recorded results
+
+## Forward test (in progress)
+
+Model code and Elo ratings were locked on **2 November 2026 at 16:07 UTC**, with SHA-256 hashes recorded in `forward_test/model_lock.json`. The forward-test script imports the locked code and uses the locked rating snapshot. Predictions are recorded before their respective match results are known, and results are stored separately.
+
+| Match | Format | Team A predicted series win probability |
+|---|---|---:|
+| Top Esports vs Invictus Gaming | Bo5 | 49.77% |
+| Gen.G vs LYON | Bo5 | 84.62% |
+
+`forward_test/predictions.csv` contains the two recorded predictions. GitHub's remote commit history can be used to check whether each version of the prediction file was published before the corresponding match began. The local lock timestamp by itself does not establish when a prediction was published.
+
+**Scope:** This is a two-match prospective demonstration of the workflow, not a statistically meaningful performance evaluation. The ratings remain fixed across matches, so subsequent tournament results are not reflected. The lock date refers to when this snapshot was frozen, **not** a separately verified source-data cutoff date. Do not reuse the snapshot for a future season without updating ratings and applying seasonal carryover.
 
 ## Limitations
 
-Elo does not explicitly model draft, patches, roster changes or intra-series dependence; win probabilities may be miscalibrated across regions. Selected series sample is small and cannot be used to claim reliable Bo3/Bo5 generalisation. No live predictions, bets, bookmaker lines or profitability analysis are provided.
+Elo does not explicitly model draft, patches, roster changes or intra-series dependence; win probabilities may be miscalibrated across regions. Selected series sample is small and cannot be used to claim reliable Bo3/Bo5 generalisation. The application offers historical Elo-based estimates, while the separate forward-test script records pre-match predictions. Neither provides live in-game predictions, bookmaker odds, betting recommendations or profitability analysis.
 
 ## Key modelling choices
 
