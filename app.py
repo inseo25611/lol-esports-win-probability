@@ -50,6 +50,57 @@ def show_prediction(team_a, team_b, elo_a, elo_b, prob_a, side_labels=False):
     st.caption(f"Pre-match Elo difference ({team_a} − {team_b}): {elo_delta:+.1f}")
 
 
+def show_series_prediction(team_a, team_b, prob_a):
+    st.divider()
+    st.subheader("Series Win Probability")
+
+    best_of = st.radio(
+        "Series format",
+        [1, 3, 5],
+        format_func=lambda x: f"Bo{x}",
+        horizontal=True,
+        key="series_format",
+    )
+
+    if best_of == 1:
+        st.metric(f"{team_a} wins Bo1", f"{prob_a:.1%}")
+        return
+
+    series_prob = series_win_probability(prob_a, best_of)
+    scores = series_score_probabilities(prob_a, best_of)
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.metric(f"{team_a} wins Bo{best_of}", f"{series_prob:.1%}")
+
+    with col2:
+        st.metric(f"{team_b} wins Bo{best_of}", f"{1-series_prob:.1%}")
+
+    st.markdown("**Exact series score probabilities**")
+
+    score_df = pd.DataFrame([
+        {
+            "Result": f"{team_a} {score} {team_b}",
+            "Probability": probability,
+        }
+        for score, probability in scores.items()
+    ])
+
+    st.dataframe(
+        score_df.style.format({"Probability": "{:.1%}"}),
+        hide_index=True,
+        use_container_width=True,
+    )
+
+    st.caption(
+        "Assumption: Games are independent and have a constant "
+        "win probability. Draft, side selection, and adaptation "
+        "between games are not modelled."
+    )
+
+
+
 st.title("🏆 LoL Esports Win Probability Predictor")
 st.write("Compare historical Elo-based match win probability estimates.")
 
@@ -82,6 +133,7 @@ if page == "🏠 Domestic Leagues (V3)":
 
     st.divider()
     show_prediction(team_a, team_b, elo_a, elo_b, prob_a)
+    show_series_prediction(team_a, team_b, prob_a)
     st.caption("V3 model: Elo K=24, seasonal carryover=0.75, no side adjustment. League-specific ratings.")
 
 else:
@@ -114,6 +166,7 @@ else:
 
     st.divider()
     show_prediction(blue_team, red_team, elo_blue, elo_red, prob_blue, side_labels=True)
+    show_series_prediction(blue_team, red_team, prob_blue)
 
     # Side adjustment is a prediction-only correction, not a rating update.
     no_bonus = elo_probability(elo_blue, elo_red)
