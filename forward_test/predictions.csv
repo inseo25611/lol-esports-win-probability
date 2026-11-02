@@ -1,2 +1,0 @@
-prediction_id,recorded_at_utc,scheduled_at_utc,model,format,team_a,team_b,team_a_region,team_b_region,elo_a,elo_b,blue_bonus,p_game_team_a,p_series_team_a,model_lock_sha256
-f5a9e6f5-e3a,2026-11-02T16:12:33+00:00,2026-11-03T22:00:00+00:00,V4,Bo5,Top Esports,Invictus Gaming,China,China,1653.4854197155478,1654.3541955878707,0,0.4987497336,0.4976557603,62f8e27bffc821a682ad4b781197d28561a2c05ec33ff8d82b586582860fe3f1
