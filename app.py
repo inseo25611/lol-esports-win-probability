@@ -17,8 +17,6 @@ def load_international_ratings():
     return pd.read_csv("international_team_ratings.csv")
 
 
-def elo_probability(blue_elo, red_elo, blue_bonus=0):
-    return 1 / (1 + 10 ** ((red_elo - blue_elo - blue_bonus) / 400))
 
 
 def show_prediction(team_a, team_b, elo_a, elo_b, prob_a, side_labels=False):
