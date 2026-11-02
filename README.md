@@ -30,7 +30,7 @@ Pre-series prediction uses first-game pre-match Elo with **no +20 side bonus**, 
 
 ## Model selection
 
-The existing V3 and V4 models are retained rather than re-tuned on the reported evaluation results. During development, K-factor, seasonal carryover, Blue-side adjustment, and probability-calibration alternatives were explored.
+The existing V3 and V4 models are retained rather than re-tuned on the reported evaluation results. During development, K-factor, seasonal carryover, Blue-side adjustment, and recent-form and logistic regression alternatives.
 
 The repository includes reproducible notebooks for the domestic and international Elo models, alongside evaluation scripts and recorded prediction data. Historical results are treated as exploratory backtests rather than untouched holdout performance.
 
