@@ -30,7 +30,11 @@ Pre-series prediction uses first-game pre-match Elo with **no +20 side bonus**, 
 
 ## Model selection
 
-The existing V3 and V4 models are retained rather than re-tuned on the reported evaluation results. In the earlier portfolio development, K-factor, seasonal carryover, Blue-side adjustment, and probability-calibration alternatives were considered. The reproducible notebooks currently included do **not** contain every original experiment (including the reported logistic-regression comparison); the missing `LoL_Project.ipynb` should be added before presenting those experiments as independently reproducible. A small gain in classification accuracy alone is not sufficient to adopt a model if Brier score or log loss worsens.
+The existing V3 and V4 models are retained rather than re-tuned on the reported evaluation results. During development, K-factor, seasonal carryover, Blue-side adjustment, and probability-calibration alternatives were explored.
+
+The repository includes reproducible notebooks for the domestic and international Elo models, alongside evaluation scripts and recorded prediction data. Historical results are treated as exploratory backtests rather than untouched holdout performance.
+
+Model selection considers probabilistic accuracy and calibration, including Brier score and log loss, rather than classification accuracy alone.
 
 ## Data and provenance
 
