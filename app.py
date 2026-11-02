@@ -1,182 +1,106 @@
-import streamlit as st
-import pandas as pd
-from elo_model import elo_probability
-from series_probability import (
-    series_score_probabilities,
-    series_win_probability,
-)
-
-st.set_page_config(
-    page_title="LoL Win Probability Predictor",
-    page_icon="🏆",
-    layout="centered",
-)
-
-@st.cache_data
-def load_domestic_ratings():
-    return pd.read_csv("latest_team_ratings.csv")
-
-@st.cache_data
-def load_international_ratings():
-    return pd.read_csv("international_team_ratings.csv")
-
-
-
-
-def show_prediction(team_a, team_b, elo_a, elo_b, prob_a, side_labels=False):
-    prob_b = 1 - prob_a
-    st.subheader("Estimated Match Win Probability")
-    left, right = st.columns(2)
-    with left:
-        st.metric(f"{'🔵 Blue · ' if side_labels else ''}{team_a}", f"{prob_a:.1%}")
-        st.caption(f"Elo rating: {elo_a:.0f}")
-    with right:
-        st.metric(f"{'🔴 Red · ' if side_labels else ''}{team_b}", f"{prob_b:.1%}")
-        st.caption(f"Elo rating: {elo_b:.0f}")
-
-    # Original-style probability progress indicator
-    st.progress(float(prob_a))
-    st.caption(f"{team_a}: {prob_a:.1%}  |  {team_b}: {prob_b:.1%}")
-
-    # New comparison visual, using only Streamlit and pandas
-    st.markdown("**Win probability comparison**")
-    plot_df = pd.DataFrame(
-        {"Probability": [prob_a * 100, prob_b * 100]},
-        index=[team_a, team_b],
-    )
-    st.bar_chart(plot_df, horizontal=True, height=210, x_label="Win probability (%)")
-
-    elo_delta = elo_a - elo_b
-    st.caption(f"Pre-match Elo difference ({team_a} − {team_b}): {elo_delta:+.1f}")
-
-
-def show_series_prediction(team_a, team_b, prob_a):
-    st.divider()
-    st.subheader("Series Win Probability")
-
-    best_of = st.radio(
-        "Series format",
-        [1, 3, 5],
-        format_func=lambda x: f"Bo{x}",
-        horizontal=True,
-        key="series_format",
-    )
-
-    if best_of == 1:
-        st.metric(f"{team_a} wins Bo1", f"{prob_a:.1%}")
+    for col in ["Matches", "Accuracy", "Log Loss", "Brier Score"]:
+        summary[col] = pd.to_numeric(summary[col], errors="coerce")
+    summary = summary.dropna(subset=["Year", "Model", "Accuracy", "Log Loss", "Brier Score"])
+    years = sorted(summary["Year"].astype(int).unique().tolist(), reverse=True)
+    if not years:
+        st.error("No valid evaluation data found.")
         return
-
-    series_prob = series_win_probability(prob_a, best_of)
-    scores = series_score_probabilities(prob_a, best_of)
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.metric(f"{team_a} wins Bo{best_of}", f"{series_prob:.1%}")
-
-    with col2:
-        st.metric(f"{team_b} wins Bo{best_of}", f"{1-series_prob:.1%}")
-
-    st.markdown("**Exact series score probabilities**")
-
-    score_df = pd.DataFrame([
-        {
-            "Result": f"{team_a} {score} {team_b}",
-            "Probability": probability,
-        }
-        for score, probability in scores.items()
-    ])
-
-    st.dataframe(
-        score_df.style.format({"Probability": "{:.1%}"}),
-        hide_index=True,
-        use_container_width=True,
-    )
-
-    st.caption(
-        "Assumption: Games are independent and have a constant "
-        "win probability. Draft, side selection, and adaptation "
-        "between games are not modelled."
-    )
-
+    year = st.selectbox("Evaluation year", years)
+    year_df = summary[summary["Year"] == year].copy().sort_values("Model")
+    v3 = year_df[year_df["Model"] == "V3"]
+    if not v3.empty:
+        v3row = v3.iloc[0]
+        a, b, c = st.columns(3)
+        a.metric("V3 accuracy", f"{v3row['Accuracy']:.2%}")
+        b.metric("V3 Brier score ↓", f"{v3row['Brier Score']:.4f}")
+        c.metric("V3 log loss ↓", f"{v3row['Log Loss']:.4f}")
+        st.caption(f"Evaluated on {int(v3row['Matches']):,} individual games in {year}. Accuracy uses a 50% classification threshold.")
+    display = year_df[["Model", "Matches", "Accuracy", "Log Loss", "Brier Score"]].copy()
+    st.dataframe(display.style.format({"Matches": "{:,.0f}", "Accuracy": "{:.2%}", "Log Loss": "{:.4f}", "Brier Score": "{:.4f}"}), hide_index=True, use_container_width=True)
+    st.markdown("**Accuracy comparison**")
+    st.bar_chart(year_df.set_index("Model")["Accuracy"] * 100, y_label="Accuracy (%)")
+    st.markdown("**Probability-quality comparison**")
+    st.bar_chart(year_df.set_index("Model")[["Brier Score", "Log Loss"]])
+    st.info("Interpretation: Accuracy measures how often the predicted winner was correct. "
+            "Brier score and log loss evaluate probability quality; lower is better. "
+            "These are historical results, not guarantees for upcoming matches.")
+    st.warning("Evaluation limitation: 2025 outcomes were used in model development, and 2026 outcomes "
+               "were inspected during development. These results are exploratory chronological backtests, "
+               "not a fully untouched holdout or live predictive-performance estimate. "
+               "They evaluate domestic single-game predictions (V1–V3), not international V4 or Bo3/Bo5 series forecasts.")
 
 
 st.title("🏆 LoL Esports Win Probability Predictor")
-st.write("Compare historical Elo-based match win probability estimates.")
-
-page = st.radio(
-    "Prediction mode",
-    ["🏠 Domestic Leagues (V3)", "🌍 International Matchups (V4)"],
-    horizontal=True,
-)
+st.write("Historical Elo-based game and series estimates — independent portfolio project.")
+page = st.radio("View", ["🏠 Domestic Leagues (V3)", "🌍 International Matchups (V4)", "📊 Historical Model Evaluation"], horizontal=False)
 st.divider()
 
 if page == "🏠 Domestic Leagues (V3)":
     df = load_domestic_ratings()
     st.header("Domestic Leagues · V3")
-    st.write("Compare teams within the same LCK or LEC league.")
-
+    st.write("Compare first-team participants within the same LCK or LEC league.")
     league = st.selectbox("Select League", sorted(df["league"].dropna().unique()))
-    league_df = df[df["league"] == league]
+    league_df = df[df["league"] == league].copy()
+    # The published LEC ratings contain an academy team. Keep source data unchanged.
+    academy_exclusions = {"Karmine Corp Blue"}
+    excluded = sorted(set(league_df["team"].dropna()).intersection(academy_exclusions))
+    league_df = league_df[~league_df["team"].isin(academy_exclusions)]
+    if excluded:
+        st.caption("Academy entries excluded from team selection: " + ", ".join(excluded) + ". Source CSV remains unchanged.")
     teams = sorted(league_df["team"].dropna().unique())
-
+    if len(teams) < 2:
+        st.error("At least two eligible teams are required.")
+        st.stop()
     col1, col2 = st.columns(2)
     with col1:
         team_a = st.selectbox("Team A", teams, index=0, key="v3_a")
     with col2:
-        available_teams = [team for team in teams if team != team_a]
-        team_b = st.selectbox("Team B", available_teams, index=0, key="v3_b")
-
+        team_b = st.selectbox("Team B", [t for t in teams if t != team_a], index=0, key="v3_b")
     elo_a = float(league_df.loc[league_df["team"] == team_a, "elo_rating"].iloc[0])
     elo_b = float(league_df.loc[league_df["team"] == team_b, "elo_rating"].iloc[0])
     prob_a = elo_probability(elo_a, elo_b)
-
+    show_data_as_of(league)
     st.divider()
     show_prediction(team_a, team_b, elo_a, elo_b, prob_a)
     show_series_prediction(team_a, team_b, prob_a)
-    st.caption("V3 model: Elo K=24, seasonal carryover=0.75, no side adjustment. League-specific ratings.")
+    st.caption("V3: Elo K=24, seasonal carryover=0.75, no side adjustment; league-specific ratings.")
 
-else:
+elif page == "🌍 International Matchups (V4)":
     df = load_international_ratings()
     st.header("International Matchups · V4")
     st.write("Compare teams from different regions on a shared global Elo scale.")
-    st.info("Blue/Red side is explicitly assigned. The Blue side receives a +20 Elo prediction adjustment.")
-
-    # Select a region first; restrict the opposing region to a different group.
+    st.info("Blue/Red side is explicitly assigned. Blue receives a +20 Elo prediction adjustment.")
     regions = sorted(df["region"].dropna().unique())
     col1, col2 = st.columns(2)
     with col1:
         blue_region = st.selectbox("🔵 Blue region", regions, key="v4_blue_region")
     with col2:
-        red_regions = [region for region in regions if region != blue_region]
-        red_region = st.selectbox("🔴 Red region", red_regions, key="v4_red_region")
-
+        red_region = st.selectbox("🔴 Red region", [r for r in regions if r != blue_region], key="v4_red_region")
     blue_teams = sorted(df.loc[df["region"] == blue_region, "team"].dropna().unique())
     red_teams = sorted(df.loc[df["region"] == red_region, "team"].dropna().unique())
-
-    team_col1, team_col2 = st.columns(2)
-    with team_col1:
+    col1, col2 = st.columns(2)
+    with col1:
         blue_team = st.selectbox("🔵 Blue team", blue_teams, key="v4_blue_team")
-    with team_col2:
+    with col2:
         red_team = st.selectbox("🔴 Red team", red_teams, key="v4_red_team")
-
-    elo_blue = float(df.loc[df["team"] == blue_team, "elo"].iloc[0])
-    elo_red = float(df.loc[df["team"] == red_team, "elo"].iloc[0])
+    elo_blue = float(df.loc[(df["region"] == blue_region) & (df["team"] == blue_team), "elo"].iloc[0])
+    elo_red = float(df.loc[(df["region"] == red_region) & (df["team"] == red_team), "elo"].iloc[0])
     prob_blue = elo_probability(elo_blue, elo_red, blue_bonus=20)
-
+    st.caption("International rating snapshot date: unverified; CSV contains no timestamp.")
     st.divider()
     show_prediction(blue_team, red_team, elo_blue, elo_red, prob_blue, side_labels=True)
     show_series_prediction(blue_team, red_team, prob_blue)
-
-    # Side adjustment is a prediction-only correction, not a rating update.
     no_bonus = elo_probability(elo_blue, elo_red)
-    st.caption(f"Without Blue-side adjustment: {blue_team} {no_bonus:.1%} · With +20 Elo: {prob_blue:.1%}")
-    st.caption("V4 model: global team Elo, K=24, seasonal carryover=0.75. "
-               "Blue +20 Elo applied to prediction only (not Elo updates).")
-    st.warning("Experimental historical model, not live odds. Regions are approximate, "
-               "some team ratings are from earlier seasons, and cross-region Elo comparisons "
-               "may be unreliable for teams without international connections.")
+    st.caption(f"Without Blue adjustment: {blue_team} {no_bonus:.1%} · With +20 Elo: {prob_blue:.1%}")
+    st.caption("V4: global team Elo, K=24, seasonal carryover=0.75; Blue +20 affects predictions only.")
+    st.warning("Experimental international model; no reported independent V4 backtest. "
+               "Regions are approximate and some ratings may be from earlier seasons. "
+               "Cross-region Elo comparisons may be unreliable without international connections.")
+
+else:
+    show_historical_performance()
 
 st.divider()
 st.caption("Data source: Oracle's Elixir (Tim Sevenhuysen). Independent, non-commercial portfolio project. "
            "Not endorsed by Riot Games or Oracle's Elixir. Not intended for betting or gambling.")
+
