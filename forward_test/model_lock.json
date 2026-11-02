@@ -1,0 +1,10 @@
+{
+  "locked_at_utc": "2026-11-02T16:07:31+00:00",
+  "description": "Frozen V3/V4 model CODE AND RATINGS; prediction-only Blue bonus V4=20, V3=0. No Elo updates after new matches. Not suitable for future seasons without a new lock.",
+  "files_sha256": {
+    "elo_model.py": "3da22d9ae128cbe59381b1ad2f62ce5b7962f299442a31931c994b2f5154eb01",
+    "international_team_ratings.csv": "16b865812e97ba26be4acb09435f6be7c5136e02f1861f4136472dfcd9b2f9a9",
+    "latest_team_ratings.csv": "0be92ff406177ce4f1f7f5c14c797a6cdcf6835d8579e626b212ce5cfba8eae6",
+    "series_probability.py": "39a06339757d621fc8b867ac8683d581649ff29ca9dfa016909aca5b52cf0608"
+  }
+}
